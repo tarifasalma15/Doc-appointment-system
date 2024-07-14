@@ -78,5 +78,50 @@ const authController = async (req,res) => {
 };
 
 
-module.exports = {loginController, registerController , authController};
+// Google login controller
+const googleLoginController = async (req, res) => {
+    try {
+        const { email, name } = req.body;
+
+        let user = await userModel.findOne({ email });
+
+        if (!user) {
+            user = new userModel({ email, name, password: 'google-login' }); // Vous pouvez utiliser un mot de passe fictif
+            await user.save();
+        }
+
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+        res.status(200).send({ message: 'Login success', success: true, token });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ success: false, message: 'Server Error' });
+    }
+};
+
+// Google register controller
+const googleRegisterController = async (req, res) => {
+    try {
+      const { email, name } = req.body;
+  
+      let user = await userModel.findOne({ email });
+  
+      if (user) {
+        return res.status(409).send({ message: 'User Already Exist', success: false });
+      }
+  
+      user = new userModel({ email, name, password: 'google-register' }); // Vous pouvez utiliser un mot de passe fictif
+      await user.save();
+  
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+  
+      res.status(200).send({ message: 'Register success', success: true, token });
+    } catch (error) {
+      console.error(error);
+      res.status(500).send({ success: false, message: 'Server Error' });
+    }
+  };
+
+
+module.exports = {loginController, registerController , authController, googleLoginController, googleRegisterController };
 

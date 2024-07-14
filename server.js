@@ -1,32 +1,86 @@
-const express= require ('express');
-const colors= require('colors');
-const morgan= require('morgan');
-const dotenv=require ('dotenv');
-const connectDB= require("./config/db");
+const express = require('express');
+const colors = require('colors');
+const morgan = require('morgan');
+const dotenv = require('dotenv');
+const connectDB = require('./config/db');
+const http = require('http');
+const socketIo = require('socket.io');
+const cors = require('cors');
 
+// dotenv config
+dotenv.config();
 
-//dotenv config
-dotenv.config()
-
-//mongodb connection
+// mongodb connection
 connectDB();
 
-//rest object
-const app=express();
+// rest object
+const app = express();
 
-// middleware 
+// middleware
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(cors());
 
-//routes
-app.use('/api/v1/user', require('./routes/userRoutes'));
+// routes
+app.use('/api/v1/user', (req, res, next) => {
+    console.log('User route accessed');
+    next();
+}, require('./routes/userRoutes'));
 
-//port 
-const port = process.env.PORT || 8080 
+app.use('/api/v1/appointments', (req, res, next) => {
+    console.log('Appointments route accessed');
+    next();
+}, require('./routes/appointmentRoutes'));
 
-//listen port 
-app.listen(port , () =>
-{
-    console.log(`server running in ${process.env.NODE_MODE} MODE ON PART ${process.env.PORT}`
-    .bgCyan.white );
+// port
+const port = process.env.PORT || 8080;
+
+// create server
+const server = http.createServer(app);
+
+// initialize socket.io
+const io = socketIo(server, {
+    cors: {
+        origin: 'http://localhost:3000',
+        methods: ['GET', 'POST'],
+        credentials: true,
+    },
+});
+
+// Export io for use in controllers
+module.exports.io = io;
+
+// handle socket connection
+io.on('connection', (socket) => {
+    console.log('New client connected');
+
+    // Handle appointment created
+    socket.on('appointmentCreated', (appointment) => {
+        console.log('Appointment created: ', appointment);
+        // Broadcast the appointment to all clients
+        io.emit('appointmentCreated', appointment);
+    });
+
+    // Handle appointment updated
+    socket.on('appointmentUpdated', (appointment) => {
+        console.log('Appointment updated: ', appointment);
+        // Broadcast the appointment to all clients
+        io.emit('appointmentUpdated', appointment);
+    });
+
+    // Handle appointment deleted
+    socket.on('appointmentDeleted', (appointmentId) => {
+        console.log('Appointment deleted: ', appointmentId);
+        // Broadcast the deletion to all clients
+        io.emit('appointmentDeleted', appointmentId);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected');
+    });
+});
+
+// listen port
+server.listen(port, () => {
+    console.log(`server running in ${process.env.NODE_ENV} MODE ON PORT ${port}`.bgCyan.white);
 });
