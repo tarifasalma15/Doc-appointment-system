@@ -43,7 +43,7 @@ const deleteAppointment = async (req, res) => {
 // Get appointments
 const getAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.find({}); // Vous pouvez filtrer par utilisateur ici
+    const appointments = await Appointment.find({}); 
     res.status(200).json(appointments);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
